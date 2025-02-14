@@ -1,4 +1,4 @@
-# Export CSV Links
+# CSV Link Extractpr
 
 A Rust application to extract, deduplicate, and export URLs from CSV files within a specified directory. It provides a graphical user interface (GUI) built with `egui` for easy configuration and operation.
 
