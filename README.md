@@ -68,7 +68,3 @@ The application also supports command-line arguments for non-GUI usage:
 *   `rayon`: For parallel processing.
 *   `regex`: For URL validation.
 *   `eframe` and `egui`: For the GUI.
-
-## License
-
-[Specify the license under which your project is released]
