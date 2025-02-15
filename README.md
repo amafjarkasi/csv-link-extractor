@@ -1,70 +1,54 @@
 # CSV Link Extractor
 
-A Rust application to extract, deduplicate, and export URLs from CSV files within a specified directory. It provides a graphical user interface (GUI) built with `egui` for easy configuration and operation.
+A GUI application that processes CSV files to extract and manage URLs, with special handling for LinkedIn job links.
 
 ## Features
 
-*   **Directory Input:** Specify the directory containing the CSV files to process.
-*   **Output File:** Define the path for the output text file where the extracted URLs will be saved.
-*   **Skip Header:** Option to skip the first data record (not the header row) in CSV files.
-*   **Worker Threads:** Configure the number of worker threads for concurrent processing to speed up the extraction process.
-*   **Exclude File:** Provide a file containing URLs to exclude from the output (one URL per line).
-*   **Continue on Error:** Option to continue processing even if some files produce errors.
-*   **Timeout:** Set a timeout for HTTP requests.
-*   **GUI:** User-friendly interface built with `egui` for easy configuration.
-*   **URL Deduplication:** Automatically removes duplicate URLs from the output.
+- GUI interface for easy operation
+- Process multiple CSV files in a directory
+- Configurable settings that persist between sessions:
+  - Input directory path
+  - Output file location
+  - Column header selection
+  - Worker thread count
+  - Error handling preferences
+  - HTTP timeout settings
+- URL Processing:
+  - Extracts URLs from a specified CSV column
+  - Automatically converts LinkedIn job-apply links to view links
+  - Validates URLs using regex pattern matching
+  - Deduplicates URLs across all processed files
+- Master List Management:
+  - Maintains a master list of previously processed URLs
+  - Only outputs new, unique URLs not in the master list
+  - Automatically updates master list with new URLs
+- Additional Features:
+  - Multi-threaded processing for improved performance
+  - Optional URL exclusion list support
+  - Configurable error handling (continue or stop on errors)
+  - Sample CSV file header detection
 
 ## Usage
 
-1.  **Clone the repository:**
+1. Launch the application
+2. Configure settings:
+   - Set the directory containing CSV files
+   - Choose output file location
+   - Select URL column from detected headers
+   - Configure master list file (optional)
+   - Set additional options as needed
+3. Click "Process" to start URL extraction
 
-    ```bash
-    git clone <repository_url>
-    cd export_csv_links
-    ```
+## Building
 
-2.  **Build the application:**
+```bash
+cargo build --release
+```
 
-    ```bash
-    cargo build --release
-    ```
+The compiled application will be available in `target/release/export_csv_links.exe`
 
-3.  **Run the application:**
+## Requirements
 
-    ```bash
-    cargo run --release
-    ```
-
-    Alternatively, you can run the executable directly from the `target/release` directory:
-
-    ```bash
-    ./target/release/export_csv_links
-    ```
-
-4.  **Using the GUI:**
-
-    *   Enter the path to the directory containing the CSV files.
-    *   Enter the desired path for the output text file.
-    *   Configure the options as needed (skip header, number of workers, exclude file, continue on error, timeout).
-    *   Click the "Process" button to start the extraction.
-
-## Command-Line Arguments
-
-The application also supports command-line arguments for non-GUI usage:
-
-*   `-d, --directory <PATH>`: Path to the directory containing CSV files.
-*   `-o, --output <PATH>`: Path to the output text file (default: `all_urls.txt`).
-*   `-s, --skip-header`: Skip the first record of data in CSV files.
-*   `-w, --workers <NUM>`: Number of worker threads (default: 4).
-*   `--exclude-file <PATH>`: Path to a file containing URLs to exclude.
-*   `--continue-on-error`: Continue processing even if some files produce errors.
-*   `-t, --timeout <SECONDS>`: Timeout for HTTP requests in seconds (default: 90).
-
-## Dependencies
-
-*   `clap`: For command-line argument parsing.
-*   `csv`: For reading CSV files.
-*   `once_cell`: For lazy initialization of the URL regex.
-*   `rayon`: For parallel processing.
-*   `regex`: For URL validation.
-*   `eframe` and `egui`: For the GUI.
+- Windows operating system
+- CSV files with consistent column headers
+- URLs must be in standard HTTP/HTTPS format
