@@ -4,37 +4,54 @@ A GUI application that processes CSV files to extract and manage URLs, with spec
 
 ## Features
 
-- GUI interface for easy operation
-- Process multiple CSV files in a directory
-- Configurable settings that persist between sessions:
+- Modern dark-themed GUI interface with fixed window size (400x660)
+- Process multiple CSV files in parallel from a selected directory
+- Comprehensive settings persisted between sessions:
   - Input directory path
   - Output file location
   - Column header selection
   - Error handling preferences
-- URL Processing:
-  - Extracts URLs from a specified CSV column
-  - Automatically converts LinkedIn job-apply links to view links
-  - Validates URLs using regex pattern matching
-  - Deduplicates URLs across all processed files
-- Master List Management:
-  - Maintains a master list of previously processed URLs
-  - Only outputs new, unique URLs not in the master list
-  - Automatically updates master list with new URLs
-- Additional Features:
-  - Optional URL exclusion list support
-  - Configurable error handling (continue or stop on errors)
-  - Sample CSV file header detection
+  - Worker thread count (1-16)
+  - Request timeout configuration
+
+## URL Processing
+- Auto-detects CSV headers from sample file
+- Extracts URLs from specified column
+- Validates URLs using regex pattern matching
+- Converts LinkedIn job-apply links to view links
+- Deduplicates URLs across all processed files
+- Supports URL exclusion list
+
+## Master List Management
+- Maintains persistent master list of processed URLs
+- Filters out previously processed URLs
+- Auto-updates master list with new entries
+
+## Statistics Dashboard
+- Real-time processing statistics
+- Tracks:
+  - Total files processed
+  - Total URLs found
+  - Unique URLs count
+  - Excluded URLs count
+  - Duplicate URLs detected
+  - Processing time
+  - Last run timestamp
+- Statistics persist between sessions
 
 ## Usage
 
 1. Launch the application
 2. Configure settings:
-   - Set the directory containing CSV files
+   - Select directory containing CSV files
    - Choose output file location
+   - Load a sample CSV to detect headers
    - Select URL column from detected headers
-   - Configure master list file (optional)
-   - Set additional options as needed
-3. Click "Process" to start URL extraction
+   - Set master list file (optional)
+   - Configure exclusion list (optional)
+   - Adjust worker threads and timeout
+3. Click "Process" to start extraction
+4. View results in Statistics tab
 
 ## Building
 

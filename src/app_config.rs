@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AppConfig {
     pub directory: String,
     pub output: String,
@@ -14,6 +14,18 @@ pub struct AppConfig {
     pub master_list_path: String,
     pub sample_file_path: String,
     pub selected_header: String,
+    pub statistics: Statistics,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+pub struct Statistics {
+    pub total_files_processed: usize,
+    pub total_urls_found: usize,
+    pub unique_urls: usize,
+    pub excluded_urls: usize,
+    pub duplicate_urls: usize,
+    pub processing_time: f64,
+    pub last_run: Option<String>,
 }
 
 impl AppConfig {
@@ -58,6 +70,7 @@ impl Default for AppConfig {
             master_list_path: String::new(),
             sample_file_path: String::new(),
             selected_header: String::from("Company Apply Url"),
+            statistics: Statistics::default(),
         }
     }
 }

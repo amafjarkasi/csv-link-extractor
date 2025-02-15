@@ -9,11 +9,12 @@ use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use eframe::{egui, App, Frame, NativeOptions, Storage};
-use egui::{CentralPanel, TextEdit};
+use egui::{CentralPanel, TextEdit, TopBottomPanel};
+use chrono::Local;
 mod master_list;
 use master_list::MasterList;
 mod app_config;
-use app_config::AppConfig;
+use app_config::{AppConfig, Statistics};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -207,6 +208,12 @@ fn process_directory(
     filtered_urls
 }
 
+#[derive(PartialEq)]
+enum Tab {
+    Main,
+    Statistics,
+}
+
 struct ExportCsvLinksApp {
     directory: String,
     output: String,
@@ -221,6 +228,9 @@ struct ExportCsvLinksApp {
     available_headers: Vec<String>, 
     selected_header: String,
     config: AppConfig,
+    status_message: String,
+    current_tab: Tab,
+    statistics: Statistics,
 }
 
 impl Default for ExportCsvLinksApp {
@@ -239,7 +249,10 @@ impl Default for ExportCsvLinksApp {
             sample_file_path: config.sample_file_path.clone(),
             available_headers: Vec::new(),
             selected_header: config.selected_header.clone(),
-            config,
+            config: config.clone(), // Clone config before moving
+            status_message: String::from("Ready"),
+            current_tab: Tab::Main,
+            statistics: config.statistics.clone(),
         };
         
         // Load the CSV headers during initialization
@@ -257,7 +270,6 @@ impl ExportCsvLinksApp {
                     .iter()
                     .map(|h| h.to_string())
                     .collect();
-                
                 // If current selected header isn't in the list, select first available
                 if !self.available_headers.contains(&self.selected_header) {
                     self.selected_header = self.available_headers
@@ -266,6 +278,51 @@ impl ExportCsvLinksApp {
                         .unwrap_or_default();
                 }
             }
+        }
+    }
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
+        let mut style = (*ctx.style()).clone(); // Get the current style
+        style.visuals.dark_mode = true;
+        style.visuals.override_text_color = Some(egui::Color32::WHITE);
+        style.visuals.extreme_bg_color = egui::Color32::from_rgb(30, 30, 30);
+        style.visuals.widgets.noninteractive.bg_fill = egui::Color32::from_rgb(50, 50, 50);
+        style.spacing.item_spacing = egui::vec2(10.0, 10.0);
+        style.spacing.window_margin = egui::Margin::same(10.0);
+        style.visuals.window_rounding = egui::Rounding::same(5.0);
+        ctx.set_style(style);
+
+        TopBottomPanel::top("tabs").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                if ui.selectable_label(self.current_tab == Tab::Main, "Main").clicked() {
+                    self.current_tab = Tab::Main;
+                }
+                if ui.selectable_label(self.current_tab == Tab::Statistics, "Statistics").clicked() {
+                    self.current_tab = Tab::Statistics;
+                }
+            });
+        });
+
+        CentralPanel::default().show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                match self.current_tab {
+                    Tab::Main => self.render_main_tab(ui),
+                    Tab::Statistics => self.render_statistics_tab(ui),
+                }
+            });
+
+            // Status bar at the bottom
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+                ui.add_space(4.0);
+                ui.separator();
+                ui.horizontal(|ui| {
+                    ui.label(&self.status_message);
+                });
+            });
+        });
+
+        // Check for any UI changes
+        if ctx.input(|i| i.pointer.any_pressed() || i.key_pressed(egui::Key::Enter)) {
+            self.save_config();
         }
     }
 
@@ -280,109 +337,118 @@ impl ExportCsvLinksApp {
         self.config.master_list_path = self.master_list_path.clone();
         self.config.sample_file_path = self.sample_file_path.clone();
         self.config.selected_header = self.selected_header.clone();
+        self.config.statistics = self.statistics.clone();
 
         if let Err(e) = self.config.save() {
             eprintln!("Error saving config: {}", e);
         }
     }
-}
 
-impl App for ExportCsvLinksApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
-        let mut style = (*ctx.style()).clone(); // Get the current style
+    fn update_statistics(&mut self, 
+        files_processed: usize,
+        all_urls: &HashSet<String>,
+        excluded_urls: &HashSet<String>,
+        start_time: std::time::Instant,
+        unique_count: usize
+    ) {
+        self.statistics = Statistics {
+            total_files_processed: files_processed,
+            total_urls_found: all_urls.len(),
+            unique_urls: unique_count,
+            excluded_urls: excluded_urls.len(),
+            duplicate_urls: all_urls.len() - unique_count - excluded_urls.len(),
+            processing_time: start_time.elapsed().as_secs_f64(),
+            last_run: Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+        };
+        
+        // Save statistics to config
+        self.config.statistics = self.statistics.clone();
+        self.save_config();
+    }
 
-        // Modify colors
-        style.visuals.dark_mode = true;
-        style.visuals.override_text_color = Some(egui::Color32::WHITE);
-        style.visuals.extreme_bg_color = egui::Color32::from_rgb(30, 30, 30);
-        style.visuals.widgets.noninteractive.bg_fill = egui::Color32::from_rgb(50, 50, 50);
+    fn render_main_tab(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Export CSV Links");
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.label("Directory:");
+            ui.add(TextEdit::singleline(&mut self.directory));
 
-        // Modify spacing
-        style.spacing.item_spacing = egui::vec2(10.0, 10.0);
-        style.spacing.window_margin = egui::Margin::same(10.0);
-
-        // Modify shapes
-        style.visuals.window_rounding = egui::Rounding::same(5.0);
-
-        ctx.set_style(style);
-
-        CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Export CSV Links");
-
-            ui.horizontal(|ui| {
-                ui.label("Directory:");
-                ui.add(TextEdit::singleline(&mut self.directory));
-            });
-
-            ui.horizontal(|ui| {
-                ui.label("Output File:");
-                ui.add(TextEdit::singleline(&mut self.output));
-            });
+            ui.label("Output File:");
+            ui.add(TextEdit::singleline(&mut self.output));
 
             ui.checkbox(&mut self.skip_header, "Skip Header");
 
-            ui.horizontal(|ui| {
-                ui.label("Workers:");
-                ui.add(egui::Slider::new(&mut self.workers, 1..=16).integer());
-            });
+            ui.label("Workers:");
+            ui.add(egui::Slider::new(&mut self.workers, 1..=16).integer());
 
-             ui.horizontal(|ui| {
-                ui.label("Exclude File:");
-                ui.add(TextEdit::singleline(&mut self.exclude_file));
-            });
+            ui.label("Exclude File:");
+            ui.add(TextEdit::singleline(&mut self.exclude_file));
 
             ui.checkbox(&mut self.continue_on_error, "Continue on Error");
 
-            ui.horizontal(|ui| {
-                ui.label("Timeout:");
-                ui.add(egui::Slider::new(&mut self.timeout, 1..=300).integer());
-            });
+            ui.label("Timeout:");
+            ui.add(egui::Slider::new(&mut self.timeout, 1..=300).integer());
 
-            ui.horizontal(|ui| {
-                ui.label("Master List File:");
-                if ui.text_edit_singleline(&mut self.master_list_path).changed() {
-                    if Path::new(&self.master_list_path).exists() {
-                        if let Err(e) = self.master_list.load_from_file(&self.master_list_path) {
-                            eprintln!("Error loading master list: {}", e);
-                        }
+            ui.label("Master List File:");
+            if ui.text_edit_singleline(&mut self.master_list_path).changed() {
+                if Path::new(&self.master_list_path).exists() {
+                    if let Err(e) = self.master_list.load_from_file(&self.master_list_path) {
+                        eprintln!("Error loading master list: {}", e);
                     }
                 }
-            });
+            }
 
             if self.master_list.is_loaded() {
                 ui.label("Master list is loaded and will filter processed URLs");
             }
 
             // Add sample CSV loader
-            ui.horizontal(|ui| {
-                ui.label("Sample CSV:");
-                if ui.text_edit_singleline(&mut self.sample_file_path).changed() {
-                    if Path::new(&self.sample_file_path).exists() {
-                        self.load_sample_csv();
-                    }
+            ui.label("Sample CSV:");
+            if ui.text_edit_singleline(&mut self.sample_file_path).changed() {
+                if Path::new(&self.sample_file_path).exists() {
+                    self.load_sample_csv();
                 }
-            });
+            }
 
             // Add column selector
             if !self.available_headers.is_empty() {
-                ui.horizontal(|ui| {
-                    ui.label("URL Column:");
-                    egui::ComboBox::from_id_source("header_selector")
-                        .selected_text(&self.selected_header)
-                        .show_ui(ui, |ui| {
-                            for header in &self.available_headers {
-                                ui.selectable_value(
-                                    &mut self.selected_header,
-                                    header.clone(),
-                                    header
-                                );
-                            }
-                        });
-                });
+                ui.label("URL Column:");
+                egui::ComboBox::from_id_source("header_selector")
+                    .selected_text(&self.selected_header)
+                    .show_ui(ui, |ui| {
+                        for header in &self.available_headers {
+                            ui.selectable_value(
+                                &mut self.selected_header,
+                                header.clone(),
+                                header
+                            );
+                        }
+                    });
             }
 
             if ui.button("Process").clicked() {
+                self.status_message = "Processing...".to_string();
+                let start_time = std::time::Instant::now();
+                
                 let directory_path = PathBuf::from(self.directory.clone());
+                
+                // Fix the ownership issue in files_processed counting
+                let files_processed = fs::read_dir(&directory_path)
+                    .map(|entries| entries
+                        .filter(|entry| {
+                            entry.as_ref()
+                                .ok()
+                                .map(|e| {
+                                    e.path()
+                                        .extension()
+                                        .and_then(|ext| ext.to_str())
+                                        .map(|ext| ext.eq_ignore_ascii_case("csv"))
+                                        .unwrap_or(false)
+                                })
+                                .unwrap_or(false)
+                        })
+                        .count())
+                    .unwrap_or(0);
+
                 let output_path = PathBuf::from(self.output.clone());
                 let exclude_file_path = if !self.exclude_file.is_empty() {
                     Some(PathBuf::from(self.exclude_file.clone()))
@@ -404,8 +470,8 @@ impl App for ExportCsvLinksApp {
                     })
                     .unwrap_or_else(HashSet::new);
 
-                // Get the URLs from processing
-                let all_urls = process_directory(
+                // Get the URLs from processing and store in a variable we won't move
+                let all_urls_set = process_directory(
                     directory_path.clone(),
                     self.workers,
                     self.skip_header,
@@ -417,34 +483,78 @@ impl App for ExportCsvLinksApp {
                 // Write results to both output file and master list
                 if let Ok(file) = File::create(&output_path) {
                     let mut writer = BufWriter::new(file);
-                    for url in all_urls {
-                        if !excluded_urls.contains(&url) && !self.master_list.contains(&url) {
+                    let mut count = 0;
+                    for url in &all_urls_set {  // Use reference to avoid moving
+                        if !excluded_urls.contains(url) && !self.master_list.contains(url) {
                             if let Err(e) = writeln!(writer, "{}", url) {
-                                eprintln!("Error writing to output file: {}", e);
+                                self.status_message = format!("Error writing to file: {}", e);
+                                break;
                             }
-                            self.master_list.add(url);
+                            self.master_list.add(url.clone());
+                            count += 1;
                         }
                     }
 
                     // Save updated master list
                     if self.master_list.is_loaded() {
                         if let Err(e) = self.master_list.save() {
-                            eprintln!("Error saving master list: {}", e);
+                            self.status_message = format!("Error saving master list: {}", e);
                         }
                     }
 
-                    println!(
-                        "URLs from all CSV files in {:?} extracted, deduplicated, and saved to {:?}",
-                        directory_path, output_path
+                    self.update_statistics(
+                        files_processed,
+                        &all_urls_set,  // Pass reference
+                        &excluded_urls,
+                        start_time,
+                        count
                     );
+
+                    self.status_message = format!("Processed {} unique URLs", count);
+                } else {
+                    self.status_message = "Error creating output file".to_string();
                 }
             }
         });
+    }
 
-        // Check for any UI changes
-        if ctx.input(|i| i.pointer.any_pressed() || i.key_pressed(egui::Key::Enter)) {
-            self.save_config();
-        }
+    fn render_statistics_tab(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Statistics Dashboard");
+        ui.add_space(10.0);
+        egui::Grid::new("stats_grid")
+            .num_columns(2)
+            .spacing([40.0, 4.0])
+            .show(ui, |ui| {
+                ui.label("Total Files Processed:");
+                ui.label(format!("{}", self.statistics.total_files_processed));
+                ui.end_row();
+
+                ui.label("Total URLs Found:");
+                ui.label(format!("{}", self.statistics.total_urls_found));
+                ui.end_row();
+
+                ui.label("Unique URLs:");
+                ui.label(format!("{}", self.statistics.unique_urls));
+                ui.end_row();
+
+                ui.label("Excluded URLs:");
+                ui.label(format!("{}", self.statistics.excluded_urls));
+                ui.end_row();
+
+                ui.label("Duplicate URLs:");
+                ui.label(format!("{}", self.statistics.duplicate_urls));
+                ui.end_row();
+
+                ui.label("Processing Time:");
+                ui.label(format!("{:.2}s", self.statistics.processing_time));
+                ui.end_row();
+
+                if let Some(last_run) = &self.statistics.last_run {
+                    ui.label("Last Run:");
+                    ui.label(last_run);
+                    ui.end_row();
+                }
+            });
     }
 
     fn save(&mut self, _storage: &mut dyn Storage) {
@@ -452,11 +562,22 @@ impl App for ExportCsvLinksApp {
     }
 }
 
+impl App for ExportCsvLinksApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
+        self.update(ctx, _frame);
+    }
+
+    fn save(&mut self, _storage: &mut dyn Storage) { // Added underscore to unused parameter
+        self.save_config();
+    }
+}
+
 fn main() -> Result<(), eframe::Error> {
     let options = NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size(egui::vec2(400.0, 460.0)),
-        persist_window: true,  // Fixed window persistence option
+            .with_inner_size(egui::vec2(400.0, 660.0))
+            .with_resizable(false), // Disable window resizing
+        persist_window: true,
         ..Default::default()
     };
     
