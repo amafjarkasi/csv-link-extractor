@@ -42,13 +42,17 @@ A GUI application that processes CSV files to extract and manage URLs, with spec
 ## Screenshots
 
 ### Main Interface (2024-02-08)
-![Main Interface]
+[Main Interface]
+
 ![alt text](main-interface.png)
+
 *Dark theme interface with URL processing controls*
 
 ### Statistics Dashboard (2024-02-08)
-![Statistics Dashboard]
+[Statistics Dashboard]
+
 ![alt text](statistics-dashboard.png)
+
 *Real-time processing statistics and history*
 
 ## Usage
