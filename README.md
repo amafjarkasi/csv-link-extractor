@@ -46,7 +46,7 @@ A GUI application that processes CSV files to extract and manage URLs, with spec
 *Dark theme interface with URL processing controls*
 
 ### Statistics Dashboard (2024-02-08)
-![Statistics Dashboard](./screenshots/statistics-dashboard.png)
+![Statistics Dashboard](![alt text](statistics-dashboard.png))
 *Real-time processing statistics and history*
 
 ## Usage
