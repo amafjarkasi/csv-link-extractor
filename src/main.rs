@@ -425,7 +425,12 @@ impl ExportCsvLinksApp {
                     });
             }
 
-            if ui.button("Process").clicked() {
+            // Style the Process button with better contrast
+            let process_button = egui::Button::new("Process")
+                .fill(egui::Color32::from_rgb(28, 113, 216))  // Changed to a vibrant blue
+                .stroke(egui::Stroke::none());
+                
+            if ui.add(process_button).clicked() {
                 self.status_message = "Processing...".to_string();
                 let start_time = std::time::Instant::now();
                 
