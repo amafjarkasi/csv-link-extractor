@@ -10,9 +10,7 @@ A GUI application that processes CSV files to extract and manage URLs, with spec
   - Input directory path
   - Output file location
   - Column header selection
-  - Worker thread count
   - Error handling preferences
-  - HTTP timeout settings
 - URL Processing:
   - Extracts URLs from a specified CSV column
   - Automatically converts LinkedIn job-apply links to view links
@@ -23,7 +21,6 @@ A GUI application that processes CSV files to extract and manage URLs, with spec
   - Only outputs new, unique URLs not in the master list
   - Automatically updates master list with new URLs
 - Additional Features:
-  - Multi-threaded processing for improved performance
   - Optional URL exclusion list support
   - Configurable error handling (continue or stop on errors)
   - Sample CSV file header detection
