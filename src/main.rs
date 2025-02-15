@@ -236,6 +236,15 @@ struct ExportCsvLinksApp {
 impl Default for ExportCsvLinksApp {
     fn default() -> Self {
         let config = AppConfig::load();
+        let mut master_list = MasterList::new();
+        
+        // Load master list if path exists
+        if !config.master_list_path.is_empty() && Path::new(&config.master_list_path).exists() {
+            if let Err(e) = master_list.load_from_file(&config.master_list_path) {
+                eprintln!("Error loading master list: {}", e);
+            }
+        }
+
         let mut app = Self {
             directory: config.directory.clone(),
             output: config.output.clone(),
@@ -244,18 +253,17 @@ impl Default for ExportCsvLinksApp {
             exclude_file: config.exclude_file.clone(),
             continue_on_error: config.continue_on_error,
             timeout: config.timeout,
-            master_list: MasterList::new(),
+            master_list,  // Use the loaded master list
             master_list_path: config.master_list_path.clone(),
             sample_file_path: config.sample_file_path.clone(),
             available_headers: Vec::new(),
             selected_header: config.selected_header.clone(),
-            config: config.clone(), // Clone config before moving
+            config: config.clone(),
             status_message: String::from("Ready"),
             current_tab: Tab::Main,
             statistics: config.statistics.clone(),
         };
         
-        // Load the CSV headers during initialization
         app.load_sample_csv();
         app
     }
@@ -281,11 +289,14 @@ impl ExportCsvLinksApp {
         }
     }
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
-        let mut style = (*ctx.style()).clone(); // Get the current style
+        let accent_color = egui::Color32::from_rgb(28, 113, 216); // Define accent color once
+        
+        let mut style = (*ctx.style()).clone();
         style.visuals.dark_mode = true;
         style.visuals.override_text_color = Some(egui::Color32::WHITE);
         style.visuals.extreme_bg_color = egui::Color32::from_rgb(30, 30, 30);
         style.visuals.widgets.noninteractive.bg_fill = egui::Color32::from_rgb(50, 50, 50);
+        style.visuals.selection.bg_fill = accent_color; // Use accent color for selection
         style.spacing.item_spacing = egui::vec2(10.0, 10.0);
         style.spacing.window_margin = egui::Margin::same(10.0);
         style.visuals.window_rounding = egui::Rounding::same(5.0);
@@ -351,12 +362,19 @@ impl ExportCsvLinksApp {
         start_time: std::time::Instant,
         unique_count: usize
     ) {
+        // Fix duplicate calculation:
+        // total_urls = all found URLs before any filtering
+        // unique_count = URLs after master list and exclusion filtering
+        // excluded_urls = URLs that matched exclusion list
+        // duplicates = URLs that were filtered by master list
+        let duplicate_urls = all_urls.len() - (unique_count + excluded_urls.len());
+        
         self.statistics = Statistics {
             total_files_processed: files_processed,
             total_urls_found: all_urls.len(),
             unique_urls: unique_count,
             excluded_urls: excluded_urls.len(),
-            duplicate_urls: all_urls.len() - unique_count - excluded_urls.len(),
+            duplicate_urls,  // Use the correctly calculated value
             processing_time: start_time.elapsed().as_secs_f64(),
             last_run: Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
         };
@@ -427,7 +445,7 @@ impl ExportCsvLinksApp {
 
             // Style the Process button with better contrast
             let process_button = egui::Button::new("Process")
-                .fill(egui::Color32::from_rgb(28, 113, 216))  // Changed to a vibrant blue
+                .fill(egui::Color32::from_rgb(28, 113, 216))  // Same accent color as tabs
                 .stroke(egui::Stroke::none());
                 
             if ui.add(process_button).clicked() {
@@ -524,7 +542,23 @@ impl ExportCsvLinksApp {
     }
 
     fn render_statistics_tab(&mut self, ui: &mut egui::Ui) {
-        ui.heading("Statistics Dashboard");
+        ui.horizontal(|ui| {
+            ui.heading("Statistics Dashboard");
+            if ui.button("🔄").on_hover_text("Reset Statistics").clicked() {
+                self.statistics = Statistics {
+                    total_files_processed: 0,
+                    total_urls_found: 0,
+                    unique_urls: 0,
+                    excluded_urls: 0,
+                    duplicate_urls: 0,
+                    processing_time: 0.0,
+                    last_run: None,
+                };
+                self.config.statistics = self.statistics.clone();
+                self.save_config();
+            }
+        });
+        
         ui.add_space(10.0);
         egui::Grid::new("stats_grid")
             .num_columns(2)

@@ -4,7 +4,10 @@ A GUI application that processes CSV files to extract and manage URLs, with spec
 
 ## Features
 
-- Modern dark-themed GUI interface with fixed window size (400x660)
+- Modern dark-themed GUI interface with:
+  - Fixed window size (400x660px)
+  - Color-coordinated accent colors for UI elements
+  - Non-resizable window for consistent layout
 - Process multiple CSV files in parallel from a selected directory
 - Comprehensive settings persisted between sessions:
   - Input directory path
@@ -24,11 +27,14 @@ A GUI application that processes CSV files to extract and manage URLs, with spec
 
 ## Master List Management
 - Maintains persistent master list of processed URLs
+- Automatically loads master list on startup
 - Filters out previously processed URLs
 - Auto-updates master list with new entries
+- Auto-saves changes to master list
 
 ## Statistics Dashboard
 - Real-time processing statistics
+- Reset capability with single-click button
 - Tracks:
   - Total files processed
   - Total URLs found
@@ -68,6 +74,7 @@ A GUI application that processes CSV files to extract and manage URLs, with spec
    - Adjust worker threads and timeout
 3. Click "Process" to start extraction
 4. View results in Statistics tab
+5. Reset statistics if needed using reset button
 
 ## Building
 
