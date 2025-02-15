@@ -226,7 +226,7 @@ struct ExportCsvLinksApp {
 impl Default for ExportCsvLinksApp {
     fn default() -> Self {
         let config = AppConfig::load();
-        Self {
+        let mut app = Self {
             directory: config.directory.clone(),
             output: config.output.clone(),
             skip_header: config.skip_header,
@@ -240,7 +240,11 @@ impl Default for ExportCsvLinksApp {
             available_headers: Vec::new(),
             selected_header: config.selected_header.clone(),
             config,
-        }
+        };
+        
+        // Load the CSV headers during initialization
+        app.load_sample_csv();
+        app
     }
 }
 
@@ -451,7 +455,7 @@ impl App for ExportCsvLinksApp {
 fn main() -> Result<(), eframe::Error> {
     let options = NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size(egui::vec2(400.0, 720.0)),
+            .with_inner_size(egui::vec2(400.0, 460.0)),
         persist_window: true,  // Fixed window persistence option
         ..Default::default()
     };
