@@ -212,6 +212,7 @@ fn process_directory(
 enum Tab {
     Main,
     Statistics,
+    Settings,
 }
 
 struct ExportCsvLinksApp {
@@ -231,6 +232,7 @@ struct ExportCsvLinksApp {
     status_message: String,
     current_tab: Tab,
     statistics: Statistics,
+    use_timestamp: bool,
 }
 
 impl Default for ExportCsvLinksApp {
@@ -262,6 +264,7 @@ impl Default for ExportCsvLinksApp {
             status_message: String::from("Ready"),
             current_tab: Tab::Main,
             statistics: config.statistics.clone(),
+            use_timestamp: config.use_timestamp,
         };
         
         app.load_sample_csv();
@@ -288,7 +291,7 @@ impl ExportCsvLinksApp {
             }
         }
     }
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
         let accent_color = egui::Color32::from_rgb(28, 113, 216); // Define accent color once
         
         let mut style = (*ctx.style()).clone();
@@ -310,6 +313,9 @@ impl ExportCsvLinksApp {
                 if ui.selectable_label(self.current_tab == Tab::Statistics, "Statistics").clicked() {
                     self.current_tab = Tab::Statistics;
                 }
+                if ui.selectable_label(self.current_tab == Tab::Settings, "Settings").clicked() {
+                    self.current_tab = Tab::Settings;
+                }
             });
         });
 
@@ -318,6 +324,7 @@ impl ExportCsvLinksApp {
                 match self.current_tab {
                     Tab::Main => self.render_main_tab(ui),
                     Tab::Statistics => self.render_statistics_tab(ui),
+                    Tab::Settings => self.render_settings_tab(ui),
                 }
             });
 
@@ -349,6 +356,7 @@ impl ExportCsvLinksApp {
         self.config.sample_file_path = self.sample_file_path.clone();
         self.config.selected_header = self.selected_header.clone();
         self.config.statistics = self.statistics.clone();
+        self.config.use_timestamp = self.use_timestamp;
 
         if let Err(e) = self.config.save() {
             eprintln!("Error saving config: {}", e);
@@ -388,65 +396,47 @@ impl ExportCsvLinksApp {
         ui.heading("Export CSV Links");
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.label("Directory:");
-            ui.add(TextEdit::singleline(&mut self.directory));
+            if ui.add(TextEdit::singleline(&mut self.directory)).changed() {
+                self.save_config();
+            }
 
             ui.label("Output File:");
-            ui.add(TextEdit::singleline(&mut self.output));
-
-            ui.checkbox(&mut self.skip_header, "Skip Header");
-
-            ui.label("Workers:");
-            ui.add(egui::Slider::new(&mut self.workers, 1..=16).integer());
+            if ui.add(TextEdit::singleline(&mut self.output)).changed() {
+                self.save_config();
+            }
 
             ui.label("Exclude File:");
-            ui.add(TextEdit::singleline(&mut self.exclude_file));
-
-            ui.checkbox(&mut self.continue_on_error, "Continue on Error");
-
-            ui.label("Timeout:");
-            ui.add(egui::Slider::new(&mut self.timeout, 1..=300).integer());
-
-            ui.label("Master List File:");
-            if ui.text_edit_singleline(&mut self.master_list_path).changed() {
-                if Path::new(&self.master_list_path).exists() {
-                    if let Err(e) = self.master_list.load_from_file(&self.master_list_path) {
-                        eprintln!("Error loading master list: {}", e);
-                    }
-                }
-            }
-
-            if self.master_list.is_loaded() {
-                ui.label("Master list is loaded and will filter processed URLs");
-            }
-
-            // Add sample CSV loader
-            ui.label("Sample CSV:");
-            if ui.text_edit_singleline(&mut self.sample_file_path).changed() {
-                if Path::new(&self.sample_file_path).exists() {
-                    self.load_sample_csv();
-                }
+            if ui.add(TextEdit::singleline(&mut self.exclude_file)).changed() {
+                self.save_config();
             }
 
             // Add column selector
             if !self.available_headers.is_empty() {
                 ui.label("URL Column:");
+                let mut selected = self.selected_header.clone();
                 egui::ComboBox::from_id_source("header_selector")
-                    .selected_text(&self.selected_header)
+                    .selected_text(&selected)
                     .show_ui(ui, |ui| {
                         for header in &self.available_headers {
-                            ui.selectable_value(
-                                &mut self.selected_header,
+                            if ui.selectable_value(
+                                &mut selected,
                                 header.clone(),
                                 header
-                            );
+                            ).changed() {
+                                // Value will be updated after the loop
+                            }
                         }
                     });
+                if selected != self.selected_header {
+                    self.selected_header = selected;
+                    self.save_config();
+                }
             }
 
             // Style the Process button with better contrast
             let process_button = egui::Button::new("Process")
                 .fill(egui::Color32::from_rgb(28, 113, 216))  // Same accent color as tabs
-                .stroke(egui::Stroke::none());
+                .stroke(egui::Stroke::NONE);
                 
             if ui.add(process_button).clicked() {
                 self.status_message = "Processing...".to_string();
@@ -472,7 +462,18 @@ impl ExportCsvLinksApp {
                         .count())
                     .unwrap_or(0);
 
-                let output_path = PathBuf::from(self.output.clone());
+                let mut output_path = PathBuf::from(self.output.clone());
+                
+                // Add timestamp to filename if enabled
+                if self.use_timestamp {
+                    if let Some(ext) = output_path.extension().and_then(|e| e.to_str()) {
+                        if let Some(stem) = output_path.file_stem().and_then(|s| s.to_str()) {
+                            let timestamp = Local::now().format("_%Y%m%d_%H%M%S");
+                            output_path.set_file_name(format!("{}{}.{}", stem, timestamp, ext));
+                        }
+                    }
+                }
+
                 let exclude_file_path = if !self.exclude_file.is_empty() {
                     Some(PathBuf::from(self.exclude_file.clone()))
                 } else {
@@ -557,6 +558,19 @@ impl ExportCsvLinksApp {
                 self.config.statistics = self.statistics.clone();
                 self.save_config();
             }
+            // Try a more general and visible cleaning symbol
+            if ui.button("⚡").on_hover_text("Clean Master List").clicked() {
+                if self.master_list.is_loaded() {
+                    let _cleaned = self.master_list.deduplicate(); // Using _ to indicate intentionally unused
+                    if let Err(e) = self.master_list.save() {
+                        self.status_message = format!("Error saving master list after cleaning: {}", e);
+                    } else {
+                        self.status_message = "Master list cleaned".to_string();
+                    }
+                } else {
+                    self.status_message = "No master list loaded".to_string();
+                }
+            }
         });
         
         ui.add_space(10.0);
@@ -594,6 +608,63 @@ impl ExportCsvLinksApp {
                     ui.end_row();
                 }
             });
+    }
+
+    fn render_settings_tab(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Settings");
+        ui.add_space(10.0);
+
+        // Add timestamp checkbox near the top
+        if ui.checkbox(&mut self.use_timestamp, "Add timestamp to output filename").changed() {
+            self.save_config();
+        }
+        if self.use_timestamp {
+            ui.small("Example: output_20240216_235959.txt");
+        }
+
+        ui.add_space(10.0);
+
+        // Move worker count setting here
+        ui.label("Workers:");
+        if ui.add(egui::Slider::new(&mut self.workers, 1..=16).integer()).changed() {
+            self.save_config();
+        }
+
+        if ui.checkbox(&mut self.skip_header, "Skip Header").changed() {
+            self.save_config();
+        }
+        if ui.checkbox(&mut self.continue_on_error, "Continue on Error").changed() {
+            self.save_config();
+        }
+
+        ui.label("Timeout:");
+        if ui.add(egui::Slider::new(&mut self.timeout, 1..=300).integer()).changed() {
+            self.save_config();
+        }
+
+        ui.add_space(10.0);
+        ui.label("Master List File:");
+        if ui.text_edit_singleline(&mut self.master_list_path).changed() {
+            if Path::new(&self.master_list_path).exists() {
+                if let Err(e) = self.master_list.load_from_file(&self.master_list_path) {
+                    eprintln!("Error loading master list: {}", e);
+                }
+            }
+            self.save_config();
+        }
+
+        if self.master_list.is_loaded() {
+            ui.label("Master list is loaded and will filter processed URLs");
+        }
+
+        ui.add_space(10.0);
+        ui.label("Sample CSV:");
+        if ui.text_edit_singleline(&mut self.sample_file_path).changed() {
+            if Path::new(&self.sample_file_path).exists() {
+                self.load_sample_csv();
+            }
+            self.save_config();
+        }
     }
 
     fn save(&mut self, _storage: &mut dyn Storage) {

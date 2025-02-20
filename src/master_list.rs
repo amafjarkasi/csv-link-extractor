@@ -55,4 +55,18 @@ impl MasterList {
         self.urls.clear();
         self.file_path = None;
     }
+
+    pub fn deduplicate(&mut self) -> usize {
+        let original_count = self.urls.len();
+        
+        // Create a new HashSet from our existing URLs 
+        // (HashSet automatically removes duplicates)
+        let unique_urls: HashSet<String> = self.urls.drain().collect();
+        
+        // Load the unique URLs back into self.urls
+        self.urls = unique_urls;
+        
+        // Return how many duplicates were removed
+        original_count - self.urls.len()
+    }
 }

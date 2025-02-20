@@ -15,6 +15,7 @@ pub struct AppConfig {
     pub sample_file_path: String,
     pub selected_header: String,
     pub statistics: Statistics,
+    pub use_timestamp: bool,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -71,6 +72,7 @@ impl Default for AppConfig {
             sample_file_path: String::new(),
             selected_header: String::from("Company Apply Url"),
             statistics: Statistics::default(),
+            use_timestamp: false,
         }
     }
 }

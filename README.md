@@ -1,49 +1,36 @@
 # CSV Link Extractor
 
-A GUI application that processes CSV files to extract and manage URLs, with special handling for LinkedIn job links.
+A GUI application for extracting URLs from CSV files with master list management, deduplication, and configurable settings.
 
 ## Features
 
-- Modern dark-themed GUI interface with:
-  - Fixed window size (400x660px)
-  - Color-coordinated accent colors for UI elements
-  - Non-resizable window for consistent layout
-- Process multiple CSV files in parallel from a selected directory
-- Comprehensive settings persisted between sessions:
-  - Input directory path
-  - Output file location
-  - Column header selection
-  - Error handling preferences
-  - Worker thread count (1-16)
-  - Request timeout configuration
+- Process multiple CSV files concurrently
+- Extract URLs from specified column
+- Maintain a master list of previously processed URLs
+- Exclude URLs using an exclude list file
+- Auto-deduplicate URLs against master list and current batch
+- Dark mode interface with three main sections:
+  - Main: Primary processing controls
+  - Statistics: Processing metrics and master list cleaning
+  - Settings: Application configuration
 
-## URL Processing
-- Auto-detects CSV headers from sample file
-- Extracts URLs from specified column
-- Validates URLs using regex pattern matching
-- Converts LinkedIn job-apply links to view links
-- Deduplicates URLs across all processed files
-- Supports URL exclusion list
+## Settings
 
-## Master List Management
-- Maintains persistent master list of processed URLs
-- Automatically loads master list on startup
-- Filters out previously processed URLs
-- Auto-updates master list with new entries
-- Auto-saves changes to master list
+- Timestamp Output Files: Automatically add timestamps to output filenames (e.g., output_20240216_235959.txt)
+- Workers: Configure number of concurrent processing threads (1-16)
+- Skip Header: Skip first data row in CSV files
+- Continue on Error: Keep processing if individual files fail
+- Timeout: Set HTTP request timeout (1-300 seconds)
+- Master List: Configure path to master list file for URL tracking
+- Sample CSV: Set a sample CSV to automatically detect URL column headers
 
-## Statistics Dashboard
-- Real-time processing statistics
-- Reset capability with single-click button
-- Tracks:
-  - Total files processed
-  - Total URLs found
-  - Unique URLs count
-  - Excluded URLs count
-  - Duplicate URLs detected
-  - Processing time
-  - Last run timestamp
-- Statistics persist between sessions
+## Statistics
+
+- Track total files processed
+- Count total, unique, excluded and duplicate URLs
+- Display processing time and last run timestamp
+- Reset statistics as needed
+- Clean master list to remove any duplicates
 
 ## Screenshots
 
@@ -63,18 +50,14 @@ A GUI application that processes CSV files to extract and manage URLs, with spec
 
 ## Usage
 
-1. Launch the application
-2. Configure settings:
-   - Select directory containing CSV files
-   - Choose output file location
-   - Load a sample CSV to detect headers
-   - Select URL column from detected headers
-   - Set master list file (optional)
-   - Configure exclusion list (optional)
-   - Adjust worker threads and timeout
-3. Click "Process" to start extraction
-4. View results in Statistics tab
-5. Reset statistics if needed using reset button
+1. Set your processing options in Settings
+2. Select input directory containing CSV files
+3. Choose output file location
+4. Select URL column from detected headers
+5. Optional: Configure exclude file path
+6. Click Process to begin extraction
+
+All settings are automatically saved between sessions.
 
 ## Building
 
