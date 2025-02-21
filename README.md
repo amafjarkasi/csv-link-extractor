@@ -31,6 +31,16 @@ A GUI application for extracting URLs from CSV files with master list management
 - Display processing time and last run timestamp
 - Reset statistics as needed
 - Clean master list to remove any duplicates
+- Enhanced visualization features:
+  - Interactive domain distribution chart
+  - Top 10 domains bar chart with frequency analysis
+  - Historical processing trends visualization
+  - Detailed statistics report generation
+  - Automatic www prefix removal for cleaner domain analysis
+  - Charts and reports saved in 'statistics' directory:
+    - `domain_distribution.png`: Visual breakdown of top domains
+    - `historical_trends.png`: URL processing trends over time
+    - `statistics_report.md`: Comprehensive statistics report
 
 ## Screenshots
 

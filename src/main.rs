@@ -15,6 +15,8 @@ mod master_list;
 use master_list::MasterList;
 mod app_config;
 use app_config::{AppConfig, Statistics};
+mod enhanced_stats;
+use enhanced_stats::{EnhancedStatistics, ProcessingSession};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -233,6 +235,7 @@ struct ExportCsvLinksApp {
     current_tab: Tab,
     statistics: Statistics,
     use_timestamp: bool,
+    enhanced_stats: EnhancedStatistics,
 }
 
 impl Default for ExportCsvLinksApp {
@@ -265,6 +268,7 @@ impl Default for ExportCsvLinksApp {
             current_tab: Tab::Main,
             statistics: config.statistics.clone(),
             use_timestamp: config.use_timestamp,
+            enhanced_stats: EnhancedStatistics::new(),
         };
         
         app.load_sample_csv();
@@ -390,6 +394,38 @@ impl ExportCsvLinksApp {
         // Save statistics to config
         self.config.statistics = self.statistics.clone();
         self.save_config();
+        
+        // Update enhanced statistics
+        let session = ProcessingSession {
+            timestamp: Local::now(),
+            total_urls: all_urls.len(),
+            unique_urls: unique_count,
+            files_processed,
+            processing_time_secs: start_time.elapsed().as_secs_f64(),
+        };
+        
+        self.enhanced_stats.add_session(session);
+        self.enhanced_stats.update_domain_frequencies(&all_urls.iter().cloned().collect::<Vec<_>>());
+        
+        // Generate charts and report
+        let stats_dir = PathBuf::from("statistics");
+        if !stats_dir.exists() {
+            let _ = std::fs::create_dir(&stats_dir);
+        }
+        
+        let domain_chart = stats_dir.join("domain_distribution.png");
+        let trend_chart = stats_dir.join("historical_trends.png");
+        let report_file = stats_dir.join("statistics_report.md");
+        
+        if let Err(e) = self.enhanced_stats.generate_domain_distribution_chart(&domain_chart) {
+            eprintln!("Failed to generate domain distribution chart: {}", e);
+        }
+        if let Err(e) = self.enhanced_stats.generate_historical_trend_chart(&trend_chart) {
+            eprintln!("Failed to generate historical trend chart: {}", e);
+        }
+        if let Err(e) = self.enhanced_stats.export_report(&report_file) {
+            eprintln!("Failed to generate statistics report: {}", e);
+        }
     }
 
     fn render_main_tab(&mut self, ui: &mut egui::Ui) {
@@ -608,6 +644,23 @@ impl ExportCsvLinksApp {
                     ui.end_row();
                 }
             });
+        
+        ui.add_space(20.0);
+        ui.heading("Enhanced Statistics");
+        
+        if ui.button("Open Statistics Directory").clicked() {
+            if let Err(e) = std::process::Command::new("explorer")
+                .arg("statistics")
+                .spawn() {
+                eprintln!("Failed to open statistics directory: {}", e);
+            }
+        }
+        
+        ui.add_space(10.0);
+        ui.label("Enhanced statistics are available in the 'statistics' directory:");
+        ui.label("- Domain distribution chart (domain_distribution.png)");
+        ui.label("- Historical trends chart (historical_trends.png)");
+        ui.label("- Detailed statistics report (statistics_report.md)");
     }
 
     fn render_settings_tab(&mut self, ui: &mut egui::Ui) {
