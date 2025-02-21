@@ -44,19 +44,26 @@ A GUI application for extracting URLs from CSV files with master list management
 
 ## Screenshots
 
-### Main Interface (2024-02-08)
+### Main Interface (2024-02-20)
 [Main Interface]
 
 ![alt text](main-interface.png)
 
 *Dark theme interface with URL processing controls*
 
-### Statistics Dashboard (2024-02-08)
+### Statistics Dashboard (2024-02-20)
 [Statistics Dashboard]
 
 ![alt text](statistics-dashboard.png)
 
 *Real-time processing statistics and history*
+
+### Settings Interface (2024-02-20)
+[Settings Interface]
+
+![alt text](settings-interface.png)
+
+*Configure application settings*
 
 ## Usage
 
