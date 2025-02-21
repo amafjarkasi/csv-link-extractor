@@ -317,7 +317,10 @@ impl ExportCsvLinksApp {
             });
         });
 
+        // Add spacing after tabs
         CentralPanel::default().show(ctx, |ui| {
+            ui.add_space(10.0);
+            
             egui::ScrollArea::vertical().show(ui, |ui| {
                 match self.current_tab {
                     Tab::Main => self.render_main_tab(ui),
