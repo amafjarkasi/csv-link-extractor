@@ -20,7 +20,6 @@ A GUI application for extracting URLs from CSV files with master list management
 - Workers: Configure number of concurrent processing threads (1-16)
 - Skip Header: Skip first data row in CSV files
 - Continue on Error: Keep processing if individual files fail
-- Timeout: Set HTTP request timeout (1-300 seconds)
 - Master List: Configure path to master list file for URL tracking
 - Sample CSV: Set a sample CSV to automatically detect URL column headers
 

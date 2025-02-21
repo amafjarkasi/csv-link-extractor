@@ -43,10 +43,6 @@ struct Args {
     /// Continue processing even if some files produce errors
     #[arg(long, default_value_t = false)]
     continue_on_error: bool,
-
-    /// Timeout for HTTP requests in seconds (default: 90)
-    #[arg(short, long, default_value_t = 90)]
-    timeout: u64,
 }
 
 // Compile the URL validation regex once
@@ -224,7 +220,6 @@ struct ExportCsvLinksApp {
     workers: usize,
     exclude_file: String,
     continue_on_error: bool,
-    timeout: u64,
     master_list: MasterList,
     master_list_path: String,
     sample_file_path: String,
@@ -257,7 +252,6 @@ impl Default for ExportCsvLinksApp {
             workers: config.workers,
             exclude_file: config.exclude_file.clone(),
             continue_on_error: config.continue_on_error,
-            timeout: config.timeout,
             master_list,  // Use the loaded master list
             master_list_path: config.master_list_path.clone(),
             sample_file_path: config.sample_file_path.clone(),
@@ -355,7 +349,6 @@ impl ExportCsvLinksApp {
         self.config.workers = self.workers;
         self.config.exclude_file = self.exclude_file.clone();
         self.config.continue_on_error = self.continue_on_error;
-        self.config.timeout = self.timeout;
         self.config.master_list_path = self.master_list_path.clone();
         self.config.sample_file_path = self.sample_file_path.clone();
         self.config.selected_header = self.selected_header.clone();
@@ -687,11 +680,6 @@ impl ExportCsvLinksApp {
             self.save_config();
         }
         if ui.checkbox(&mut self.continue_on_error, "Continue on Error").changed() {
-            self.save_config();
-        }
-
-        ui.label("Timeout:");
-        if ui.add(egui::Slider::new(&mut self.timeout, 1..=300).integer()).changed() {
             self.save_config();
         }
 
